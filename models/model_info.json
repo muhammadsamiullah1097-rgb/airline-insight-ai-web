@@ -1,0 +1,14 @@
+{
+  "regression": {
+    "model": "Linear Regression",
+    "predicts": "Arrival Delay in Minutes",
+    "r2_score": 0.9302,
+    "mae_minutes": 5.27
+  },
+  "classification": {
+    "model": "Logistic Regression",
+    "predicts": "Passenger Satisfaction",
+    "accuracy": 0.8704,
+    "roc_auc": 0.9248
+  }
+}

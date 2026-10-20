@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!-- This line makes the page fit mobile screens properly -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AirlineInsight AI — Delay & Satisfaction Predictor</title>
+<style>
+  /* ============ Simple, modern styling (no library needed) ============ */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root{
+    --bg:#0b1020; --card:#151b31; --card2:#1b2340; --line:#2a3358;
+    --text:#eef1ff; --muted:#9aa5c9; --blue:#4f8cff; --cyan:#22c8e5;
+    --green:#2ecc71; --amber:#f5a623; --red:#ff5d73; --radius:18px;
+  }
+
+  body{
+    font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+    background:
+      radial-gradient(900px 420px at 15% -5%, rgba(79,140,255,.28), transparent 60%),
+      radial-gradient(800px 400px at 90% 0%, rgba(34,200,229,.20), transparent 60%),
+      var(--bg);
+    color: var(--text); min-height: 100vh; padding: 28px 16px 48px;
+  }
+
+  .wrap{ max-width: 1180px; margin: 0 auto; }
+
+  /* ---------- Header ---------- */
+  header{ text-align:center; margin-bottom: 26px; animation: fadeDown .7s ease both; }
+  .logo{ font-size: 44px; display:inline-block; animation: float 3.5s ease-in-out infinite; }
+  h1{ font-size: clamp(28px, 4.5vw, 44px); letter-spacing:.3px; margin-top: 4px; }
+  h1 span{ background: linear-gradient(90deg, var(--blue), var(--cyan));
+           -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .tagline{ color: var(--muted); margin-top: 8px; font-size: clamp(14px, 2vw, 17px); }
+
+  /* Score chips (R2, accuracy...) shown under the title */
+  .chips{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:18px; }
+  .chip{ background: rgba(255,255,255,.05); border:1px solid var(--line); border-radius:999px;
+         padding:8px 16px; font-size:14px; backdrop-filter: blur(6px); }
+  .chip b{ color: var(--cyan); }
+
+  /* ---------- Cards layout: 2 columns on PC, 1 column on mobile ---------- */
+  .grid{ display:grid; grid-template-columns: 1fr 1fr; gap:22px; align-items:start; }
+  @media (max-width: 920px){ .grid{ grid-template-columns: 1fr; } }
+
+  .card{ background: linear-gradient(180deg, var(--card), var(--card2));
+         border:1px solid var(--line); border-radius: var(--radius);
+         padding: 24px; box-shadow: 0 18px 40px rgba(0,0,0,.35);
+         animation: fadeUp .7s ease both; transition: transform .25s ease, box-shadow .25s ease; }
+  .card:hover{ transform: translateY(-3px); box-shadow: 0 24px 50px rgba(0,0,0,.45); }
+  .card:nth-child(2){ animation-delay:.12s; }
+
+  .card h2{ font-size: 22px; display:flex; align-items:center; gap:10px; }
+  .badge{ font-size:11px; font-weight:700; letter-spacing:.6px; padding:4px 10px; border-radius:999px; }
+  .badge.reg{ background: rgba(79,140,255,.18); color:#8db4ff; border:1px solid rgba(79,140,255,.5); }
+  .badge.cls{ background: rgba(34,200,229,.14); color:#7fe3f5; border:1px solid rgba(34,200,229,.5); }
+  .desc{ color: var(--muted); font-size:14px; margin: 8px 0 18px; line-height:1.5; }
+
+  /* ---------- Form fields ---------- */
+  label{ display:block; font-size:13.5px; font-weight:600; margin: 14px 0 6px; color:#cfd7f5; }
+  .row{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+  @media (max-width: 520px){ .row{ grid-template-columns: 1fr; } }
+
+  input[type="number"], select{
+    width:100%; padding: 11px 12px; border-radius:12px; border:1px solid var(--line);
+    background:#0e1428; color:var(--text); font-size:15px; outline:none; transition: border .2s, box-shadow .2s;
+  }
+  input[type="number"]:focus, select:focus{ border-color: var(--blue); box-shadow: 0 0 0 3px rgba(79,140,255,.22); }
+
+  /* Sliders */
+  .slider-row{ display:flex; align-items:center; gap:12px; }
+  input[type="range"]{ flex:1; accent-color: var(--blue); height: 6px; cursor:pointer; }
+  .slider-val{ min-width:74px; text-align:right; font-weight:700; font-size:14px; color:var(--cyan); }
+
+  /* Rating sliders (0-5) with stars */
+  .rating{ display:flex; align-items:center; gap:10px; padding: 7px 0; border-bottom: 1px dashed rgba(255,255,255,.06); }
+  .rating:last-of-type{ border-bottom:none; }
+  .rating label{ flex: 0 0 46%; margin:0; font-weight:500; font-size:13.5px; }
+  .rating input[type="range"]{ flex:1; accent-color: var(--cyan); }
+  .stars{ min-width:86px; text-align:right; font-size:13px; color: var(--amber); letter-spacing:1px; }
+  .stars small{ color: var(--muted); letter-spacing:0; }
+
+  /* Quick preset buttons */
+  .presets{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .preset{ background:transparent; color:var(--muted); border:1px dashed var(--line);
+           padding:7px 13px; border-radius:999px; font-size:13px; cursor:pointer; transition: all .2s; }
+  .preset:hover{ color:var(--text); border-color: var(--cyan); border-style:solid; transform: translateY(-1px); }
+
+  /* Main predict button */
+  .btn{ width:100%; margin-top:20px; padding:14px; border:none; border-radius:14px; cursor:pointer;
+        font-size:16.5px; font-weight:700; color:#fff;
+        background: linear-gradient(90deg, var(--blue), var(--cyan));
+        transition: transform .15s, opacity .2s, filter .2s; }
+  .btn:hover{ filter: brightness(1.1); } .btn:active{ transform: scale(.985); }
+  .btn:disabled{ opacity:.6; cursor:wait; }
+
+  /* ---------- Result box (hidden until a prediction comes) ---------- */
+  .result{ display:none; margin-top:20px; padding:18px; border-radius:14px; text-align:center;
+           background: rgba(255,255,255,.04); border:1px solid var(--line); }
+  .result.show{ display:block; animation: pop .45s ease both; }
+  .big-number{ font-size: clamp(34px, 6vw, 48px); font-weight:800; line-height:1.1; }
+  .big-number small{ font-size:17px; color: var(--muted); font-weight:600; }
+  .status{ display:inline-block; margin-top:8px; padding:5px 14px; border-radius:999px; font-weight:700; font-size:13.5px; }
+  .status.ok{ background: rgba(46,204,113,.16); color:#6fe3a1; }
+  .status.mid{ background: rgba(245,166,35,.16); color:#ffc766; }
+  .status.bad{ background: rgba(255,93,115,.16); color:#ff93a5; }
+  .bar{ height:12px; border-radius:999px; background:#0e1428; overflow:hidden; margin-top:14px; border:1px solid var(--line); }
+  .bar-fill{ height:100%; width:0%; border-radius:999px;
+             background: linear-gradient(90deg, var(--blue), var(--cyan));
+             transition: width 1s cubic-bezier(.22,.8,.3,1); }
+  .bar-fill.green{ background: linear-gradient(90deg, #1fae5f, var(--green)); }
+  .bar-fill.red{ background: linear-gradient(90deg, #e0445e, var(--red)); }
+  .note{ color: var(--muted); font-size:13.5px; margin-top:10px; line-height:1.5; }
+
+  footer{ text-align:center; color:var(--muted); font-size:13px; margin-top:30px; line-height:1.6; }
+  footer a{ color: var(--cyan); }
+
+  /* ---------- Animations ---------- */
+  @keyframes fadeUp{ from{ opacity:0; transform: translateY(18px);} to{ opacity:1; transform:none;} }
+  @keyframes fadeDown{ from{ opacity:0; transform: translateY(-14px);} to{ opacity:1; transform:none;} }
+  @keyframes pop{ 0%{ opacity:0; transform: scale(.94);} 100%{ opacity:1; transform: scale(1);} }
+  @keyframes float{ 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-7px);} }
+  @media (prefers-reduced-motion: reduce){ *{ animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ================= HEADER ================= -->
+  <header>
+    <div class="logo">✈️</div>
+    <h1>AirlineInsight <span>AI</span></h1>
+    <p class="tagline">Predict flight arrival delays and passenger satisfaction — powered by two machine learning models trained on 129,880 real airline survey records.</p>
+    <!-- Model scores are filled here automatically from the server -->
+    <div class="chips" id="scoreChips">
+      <div class="chip">Loading model scores…</div>
+    </div>
+  </header>
+
+  <div class="grid">
+
+    <!-- ================= CARD 1: REGRESSION ================= -->
+    <section class="card">
+      <h2>🛬 Arrival Delay Predictor <span class="badge reg">REGRESSION</span></h2>
+      <p class="desc">Enter how late the flight departed and the flight distance. The Linear Regression model estimates the arrival delay.</p>
+
+      <form id="regressionForm">
+        <label for="depDelay">Departure Delay (minutes)</label>
+        <div class="slider-row">
+          <input type="range" id="depDelay" min="0" max="300" value="30">
+          <div class="slider-val"><span id="depDelayVal">30</span> min</div>
+        </div>
+
+        <label for="flightDistance1">Flight Distance (miles)</label>
+        <div class="slider-row">
+          <input type="range" id="flightDistance1" min="100" max="5000" step="10" value="1200">
+          <div class="slider-val"><span id="flightDistance1Val">1200</span> mi</div>
+        </div>
+
+        <!-- One-click example fillings for a quick demo -->
+        <div class="presets">
+          <button type="button" class="preset" data-delay="0"   data-dist="1200">✅ On-time flight</button>
+          <button type="button" class="preset" data-delay="45"  data-dist="850">🕐 45 min late</button>
+          <button type="button" class="preset" data-delay="150" data-dist="2400">⛈️ Heavily delayed</button>
+        </div>
+
+        <button class="btn" type="submit" id="regBtn">Predict Arrival Delay</button>
+      </form>
+
+      <!-- Result appears here after prediction -->
+      <div class="result" id="regResult">
+        <div class="big-number"><span id="regNumber">0</span> <small>minutes late</small></div>
+        <div><span class="status ok" id="regStatus">On time</span></div>
+        <div class="bar"><div class="bar-fill" id="regBar"></div></div>
+        <p class="note" id="regNote"></p>
+      </div>
+    </section>
+
+    <!-- ================= CARD 2: CLASSIFICATION ================= -->
+    <section class="card">
+      <h2>😊 Satisfaction Analyzer <span class="badge cls">CLASSIFICATION</span></h2>
+      <p class="desc">Enter the passenger details and rate each service from 0 to 5. The Logistic Regression model predicts if the passenger will be satisfied.</p>
+
+      <form id="classificationForm">
+        <div class="row">
+          <div>
+            <label for="age">Age</label>
+            <input type="number" id="age" min="1" max="100" value="35" required>
+          </div>
+          <div>
+            <label for="flightDistance2">Flight Distance (miles)</label>
+            <input type="number" id="flightDistance2" min="50" max="10000" value="1200" required>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="gender">Gender</label>
+            <select id="gender">
+              <option>Male</option>
+              <option>Female</option>
+            </select>
+          </div>
+          <div>
+            <label for="customerType">Customer Type</label>
+            <select id="customerType">
+              <option>Loyal Customer</option>
+              <option>dis-loyal Customer</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div>
+            <label for="travelType">Type of Travel</label>
+            <select id="travelType">
+              <option>Business travel</option>
+              <option>Personal Travel</option>
+            </select>
+          </div>
+          <div>
+            <label for="flightClass">Class</label>
+            <select id="flightClass">
+              <option>Business</option>
+              <option>Eco Plus</option>
+              <option>Eco</option>
+            </select>
+          </div>
+        </div>
+
+        <label style="margin-top:18px;">Rate the services (0 = worst, 5 = best)</label>
+        <!-- The 14 rating sliders are created by JavaScript below,
+             from one simple list — less HTML, same result. -->
+        <div id="ratingsBox"></div>
+
+        <div class="presets">
+          <button type="button" class="preset" data-profile="happy">😍 Happy passenger</button>
+          <button type="button" class="preset" data-profile="average">😐 Average passenger</button>
+          <button type="button" class="preset" data-profile="unhappy">😠 Unhappy passenger</button>
+        </div>
+
+        <button class="btn" type="submit" id="clsBtn">Predict Satisfaction</button>
+      </form>
+
+      <div class="result" id="clsResult">
+        <div class="big-number" id="clsLabel">—</div>
+        <div><span class="status ok" id="clsStatus">—</span></div>
+        <div class="bar"><div class="bar-fill" id="clsBar"></div></div>
+        <p class="note" id="clsNote"></p>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    AirlineInsight AI · Linear Regression (R² ≈ 0.93) + Logistic Regression (Accuracy ≈ 87%)<br>
+    Dataset: <a href="https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction" target="_blank" rel="noopener">Airline Passenger Satisfaction — Kaggle</a>
+    · Built with FastAPI + scikit-learn
+  </footer>
+</div>
+
+<script>
+/* ================================================================
+   JavaScript of the page — written in small, simple steps.
+   1) Show the model scores in the header chips.
+   2) Keep slider values and their labels in sync.
+   3) Build the 14 rating sliders from one list.
+   4) On form submit, send the data to the FastAPI backend
+      and show the answer with a small animation.
+   ================================================================ */
+
+// Small helper: get an element by its id, quickly
+const $ = (id) => document.getElementById(id);
+
+// ---------- 1) Load model scores from the server ----------
+fetch("/model-info")
+  .then((res) => res.json())
+  .then((info) => {
+    $("scoreChips").innerHTML =
+      `<div class="chip">📈 Regression R² Score: <b>${info.regression.r2_score}</b></div>
+       <div class="chip">🎯 Classification Accuracy: <b>${(info.classification.accuracy * 100).toFixed(2)}%</b></div>
+       <div class="chip">⏱️ Avg. Delay Error: <b>${info.regression.mae_minutes} min</b></div>
+       <div class="chip">📊 ROC-AUC: <b>${info.classification.roc_auc}</b></div>`;
+  })
+  .catch(() => { $("scoreChips").innerHTML = ""; });
+
+// ---------- Helper: animate a number counting up ----------
+function countUp(element, target, decimals = 0, duration = 900) {
+  const startTime = performance.now();
+  function step(now) {
+    const progress = Math.min((now - startTime) / duration, 1);
+    const value = target * (1 - Math.pow(1 - progress, 3)); // smooth easing
+    element.textContent = value.toFixed(decimals);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ---------- 2) Regression form: sync sliders with their labels ----------
+function syncSlider(sliderId, labelId) {
+  $(sliderId).addEventListener("input", () => { $(labelId).textContent = $(sliderId).value; });
+}
+syncSlider("depDelay", "depDelayVal");
+syncSlider("flightDistance1", "flightDistance1Val");
+
+// Regression preset buttons: fill both sliders in one click
+document.querySelectorAll("[data-delay]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    $("depDelay").value = btn.dataset.delay;
+    $("flightDistance1").value = btn.dataset.dist;
+    $("depDelayVal").textContent = btn.dataset.delay;
+    $("flightDistance1Val").textContent = btn.dataset.dist;
+  });
+});
+
+// ---------- 3) Build the 14 rating sliders ----------
+const RATINGS = [
+  ["inflight_wifi",        "Inflight Wi-Fi"],
+  ["time_convenient",      "Departure / Arrival Time"],
+  ["online_booking",       "Ease of Online Booking"],
+  ["gate_location",        "Gate Location"],
+  ["food_and_drink",       "Food and Drink"],
+  ["online_boarding",      "Online Boarding"],
+  ["seat_comfort",         "Seat Comfort"],
+  ["inflight_entertainment","Inflight Entertainment"],
+  ["onboard_service",      "On-board Service"],
+  ["leg_room",             "Leg Room Service"],
+  ["baggage_handling",     "Baggage Handling"],
+  ["checkin_service",      "Check-in Service"],
+  ["inflight_service",     "Inflight Service"],
+  ["cleanliness",          "Cleanliness"],
+];
+
+// Show a rating as stars, e.g. 4 -> "★★★★☆ 4/5"
+function starsText(value) {
+  return "★".repeat(value) + "☆".repeat(5 - value) + ` <small>${value}/5</small>`;
+}
+
+RATINGS.forEach(([key, label]) => {
+  const row = document.createElement("div");
+  row.className = "rating";
+  row.innerHTML =
+    `<label for="rate_${key}">${label}</label>
+     <input type="range" id="rate_${key}" min="0" max="5" step="1" value="3">
+     <div class="stars" id="stars_${key}">${starsText(3)}</div>`;
+  $("ratingsBox").appendChild(row);
+  row.querySelector("input").addEventListener("input", (e) => {
+    $("stars_" + key).innerHTML = starsText(Number(e.target.value));
+  });
+});
+
+// Set all 14 ratings at once (used by the preset buttons)
+function setAllRatings(values) {
+  RATINGS.forEach(([key], i) => {
+    const value = Array.isArray(values) ? values[i] : values;
+    $("rate_" + key).value = value;
+    $("stars_" + key).innerHTML = starsText(value);
+  });
+}
+
+// Satisfaction preset buttons
+document.querySelectorAll("[data-profile]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const profile = btn.dataset.profile;
+    if (profile === "happy")   setAllRatings([5,4,5,4,5,5,5,5,5,4,5,5,5,5]);
+    if (profile === "average") setAllRatings(3);
+    if (profile === "unhappy") setAllRatings([1,2,1,2,1,1,2,1,2,1,2,1,1,1]);
+  });
+});
+
+// ---------- 4a) Submit: Regression form ----------
+$("regressionForm").addEventListener("submit", async (event) => {
+  event.preventDefault(); // stop the page from reloading
+  const btn = $("regBtn");
+  btn.disabled = true; btn.textContent = "Predicting…";
+
+  try {
+    // Send the two inputs to the backend as JSON
+    const response = await fetch("/predict/regression", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        departure_delay: Number($("depDelay").value),
+        flight_distance: Number($("flightDistance1").value),
+      }),
+    });
+    const data = await response.json();
+    const delay = data.predicted_arrival_delay_minutes;
+
+    // Show the result box and animate the number + bar
+    $("regResult").classList.add("show");
+    countUp($("regNumber"), delay, 1);
+    $("regBar").style.width = Math.min((delay / 180) * 100, 100) + "%";
+
+    // Change the status text and colour based on the delay size
+    const status = $("regStatus"), note = $("regNote");
+    if (delay <= 15) {
+      status.className = "status ok"; status.textContent = "✅ Almost on time";
+      note.textContent = "Good news — passengers will barely feel this delay. No special action needed.";
+    } else if (delay <= 60) {
+      status.className = "status mid"; status.textContent = "🕐 Moderate delay";
+      note.textContent = "Inform passengers early and keep them updated. Connections may still be manageable.";
+    } else {
+      status.className = "status bad"; status.textContent = "⛈️ Severe delay";
+      note.textContent = "High delay expected. Airline should prepare rebooking, refreshments and proactive communication.";
+    }
+  } catch (error) {
+    alert("Server is not reachable. Please start the backend and try again.");
+  }
+  btn.disabled = false; btn.textContent = "Predict Arrival Delay";
+});
+
+// ---------- 4b) Submit: Classification form ----------
+$("classificationForm").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const btn = $("clsBtn");
+  btn.disabled = true; btn.textContent = "Predicting…";
+
+  // Collect every input into one object
+  const payload = {
+    age: Number($("age").value),
+    flight_distance: Number($("flightDistance2").value),
+    gender: $("gender").value,
+    customer_type: $("customerType").value,
+    travel_type: $("travelType").value,
+    flight_class: $("flightClass").value,
+  };
+  RATINGS.forEach(([key]) => { payload[key] = Number($("rate_" + key).value); });
+
+  try {
+    const response = await fetch("/predict/classification", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    const percent = Math.round(data.probability_satisfied * 100);
+    const satisfied = data.prediction === "satisfied";
+
+    $("clsResult").classList.add("show");
+    $("clsLabel").textContent = satisfied ? "😊 Satisfied" : "😕 Not Satisfied";
+    const status = $("clsStatus");
+    status.className = "status " + (satisfied ? "ok" : "bad");
+    status.textContent = satisfied
+      ? `Model is ${percent}% confident this passenger is satisfied`
+      : `Only ${percent}% chance of satisfaction`;
+
+    const bar = $("clsBar");
+    bar.className = "bar-fill " + (satisfied ? "green" : "red");
+    bar.style.width = "0%";
+    setTimeout(() => { bar.style.width = percent + "%"; }, 60); // small delay so the bar animates
+
+    $("clsNote").textContent = satisfied
+      ? "The service ratings are strong. Keep doing what is working — especially the highest-rated services."
+      : "Service ratings are weak. Improving Wi-Fi, online boarding and seat comfort usually lifts satisfaction the most.";
+  } catch (error) {
+    alert("Server is not reachable. Please start the backend and try again.");
+  }
+  btn.disabled = false; btn.textContent = "Predict Satisfaction";
+});
+</script>
+</body>
+</html>
