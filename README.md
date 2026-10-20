@@ -5,7 +5,7 @@ A small machine learning web app that predicts:
 1. **Flight arrival delay** (a number) — Linear Regression
 2. **Passenger satisfaction** (a category) — Logistic Regression
 
-Dataset: [Airline Passenger Satisfaction](https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction) (Kaggle) — 129,880 survey records.
+Dataset: [Airline Passenger Satisfaction](https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction) (Kaggle) — 129,880 survey records. The CSV files are **included in this repo** (`data/train.csv` + `data/test.csv`), so nothing needs to be downloaded separately.
 
 ## 🌐 Live Demo
 
@@ -37,8 +37,8 @@ the same answers as the Python backend.
 ## ▶️ How to run the full app locally (FastAPI version)
 
 ```bash
-# 1. Download the dataset from Kaggle and put train.csv + test.csv in data/
-#    https://www.kaggle.com/datasets/teejmahal20/airline-passenger-satisfaction
+# 1. Nothing to download - the dataset is already in data/
+#    (train.csv + test.csv are included in this repo)
 
 # 2. Install the libraries
 pip install -r requirements.txt

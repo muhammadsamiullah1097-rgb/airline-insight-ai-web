@@ -4,6 +4,6 @@ __pycache__/
 venv/
 .venv/
 
-# Dataset (download it from Kaggle - see README)
-data/train.csv
-data/test.csv
+# NOTE: The dataset files data/train.csv and data/test.csv are included
+# in this repo ON PURPOSE, so the project runs right after downloading.
+# Do not add them to .gitignore.
